@@ -2,7 +2,7 @@
 
 name = 'kgml_parser.py'
 updated = '2023-08-27'
-version = '0.2.2'
+version = '0.3.0'
 
 def kgml_parser(kegg_dir=None):
 
@@ -69,10 +69,17 @@ def kgml_parser(kegg_dir=None):
 			LOCS = open(f"{outdir}/ko/ko{path}.locs",'w')
 			if stat(f"{kegg_dir}/kgml/ko/ko{path}.kgml").st_size != 0:
 				tree = ET.parse(f"{kegg_dir}/kgml/ko/ko{path}.kgml")
+				pathway = tree.getroot().attrib['title']
+				ortho_by_path[pathway] = 0
 				for entry in tree.getroot():
 					if entry.tag == 'entry':
 						if entry.attrib['type'] == 'ortholog':
 							ortholog = [x.replace("ko:","") for x in entry.attrib['name'].split(" ")]
+							for ortho in ortholog:
+								if ortho not in path_by_orth.keys():
+									path_by_orth[ortho] = []
+								path_by_orth[ortho].append(pathway)
+							ortho_by_path[pathway] += 1
 							for graphic in entry:
 								x = 0
 								y = 0
@@ -93,39 +100,39 @@ def kgml_parser(kegg_dir=None):
 			LOCS.close()
 
 
-		if isfile(f"{kegg_dir}/details/ko{path}.details"):
+		# if isfile(f"{kegg_dir}/details/ko{path}.details"):
 
-			DET = open(f"{kegg_dir}/details/ko{path}.details",'r')
+		# 	DET = open(f"{kegg_dir}/details/ko{path}.details",'r')
 
-			pathway = ""
-			record = False
-			for line in DET:
-				line = line.rstrip()
+		# 	pathway = ""
+		# 	record = False
+		# 	for line in DET:
+		# 		line = line.rstrip()
 
-				if line != "":
-					if line[0:4] == "NAME":
-						pathway = line[4:].strip()
-						ortho_by_path[pathway] = 0
-					elif line[0:9] == "ORTHOLOGY":
-						ortho = line[9:].strip().split(" ")[0]
-						if ortho not in path_by_orth.keys():
-							path_by_orth[ortho] = []
-						path_by_orth[ortho].append(pathway)
-						ortho_by_path[pathway] += 1
-						record = True
-					elif line[0] == " " and record == True:
-						ortho = line.strip().split(" ")[0]
-						if ortho not in path_by_orth.keys():
-							path_by_orth[ortho] = []
-						path_by_orth[ortho].append(pathway)
-						ortho_by_path[pathway] += 1
-					else:
-						record = False
+		# 		if line != "":
+		# 			if line[0:4] == "NAME":
+		# 				pathway = line[4:].strip()
+		# 				ortho_by_path[pathway] = 0
+		# 			elif line[0:9] == "ORTHOLOGY":
+		# 				ortho = line[9:].strip().split(" ")[0]
+		# 				if ortho not in path_by_orth.keys():
+		# 					path_by_orth[ortho] = []
+		# 				path_by_orth[ortho].append(pathway)
+		# 				ortho_by_path[pathway] += 1
+		# 				record = True
+		# 			elif line[0] == " " and record == True:
+		# 				ortho = line.strip().split(" ")[0]
+		# 				if ortho not in path_by_orth.keys():
+		# 					path_by_orth[ortho] = []
+		# 				path_by_orth[ortho].append(pathway)
+		# 				ortho_by_path[pathway] += 1
+		# 			else:
+		# 				record = False
 
 	OUT = open(f"{kegg_dir}/etc/ortho_pathways.tsv",'w')
 	for ortho in sorted(path_by_orth.keys()):
-		# pathways = "\t".join([f"{pathway}:{ortho_by_path[pathway]}" for pathway in path_by_orth[ortho]])
-		pathways = ";".join(path_by_orth[ortho])
+		pathways = "\t".join([f"{pathway}:{ortho_by_path[pathway]}" for pathway in path_by_orth[ortho]])
+		# pathways = ";".join(path_by_orth[ortho])
 		OUT.write(f"{ortho}\t{pathways}\n")
 	OUT.close()
 	
