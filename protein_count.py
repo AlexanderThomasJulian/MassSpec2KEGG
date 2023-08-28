@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 name = 'protein_count.py'
-version = '0.1.0'
-updatd = '2023-08-02'
+version = '0.1.1'
+updatd = '2023-08-28'
 
 from argparse import ArgumentParser
 from os.path import isdir, isfile
@@ -54,15 +54,10 @@ for line in REF:
 			accessions[locus]['len'] += len(line)
 REF.close()
 
-print(annotations)
-
-exit()
-
 ## Store each reference sequence in its own fasta file. Needed to perform piece-wise BLAST search. If skipped, may return
 ## spurious hits that do not match the SCAFFOLD inference
 print(f"\tSplitting reference...")
 for count,locus in enumerate(accessions.keys()):
-	remaining = int((count%30)/10)
 	if not isfile(f"{outdir}/temp_dir/split_ref/{locus}.faa"):
 		OUT = open(f"{outdir}/temp_dir/split_ref/{locus}.faa",'w')
 		OUT.write(f">{locus}\n{accessions[locus]}\n")
@@ -77,7 +72,7 @@ for line in BLAST:
 	
 	line = line.strip()
 	
-	uniprot,ncbi,slen = line.split("\t")
+	uniprot,ncbi = line.split("\t")
 	ncbi = ncbi.split(".")[0]
 	
 	accessions[ncbi]['matches'].append(uniprot)
@@ -96,7 +91,7 @@ for item in listdir(parsed_dir):
 
 	print(f"\tDetermining Protein Count: {item}")
 
-	pg = ProgressBar(total_matches)
+	# pg = ProgressBar(total_matches)
 
 	if isdir(f"{parsed_dir}/{item}"):
 
@@ -158,7 +153,7 @@ for item in listdir(parsed_dir):
 						for i in range(int(start)-1,int(end)):
 							sequence[i] += 1
 
-				pg.update_progress_bar()
+				# pg.update_progress_bar()
 
 			# COUNT.write(f"## Accession\tAccessionSequenceLength\tDBEntriesCovered\tCumulativePartialPeptideSequences\tCummulativePeptides\tAverageSequenceCoverage\tCalculatedProteinCount\n")
 
