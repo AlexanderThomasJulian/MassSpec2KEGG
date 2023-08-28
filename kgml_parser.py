@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
 name = 'kgml_parser.py'
-updated = '2023-08-02'
-version = '0.2.0'
+updated = '2023-08-27'
+version = '0.2.2'
 
-def kgml_parser(kgml_dir=None,path_list=None,outdir="KEGG_pathway_loc_files"):
+def kgml_parser(kegg_dir=None):
 
 	from os.path import isdir, isfile, basename
 	from os import makedirs, listdir, stat
 	import xml.etree.ElementTree as ET
 
+	outdir = f"{kegg_dir}/loc"
 
 	if not isdir(outdir):
 		makedirs(outdir,mode=0o755)
@@ -22,22 +23,22 @@ def kgml_parser(kgml_dir=None,path_list=None,outdir="KEGG_pathway_loc_files"):
 
 
 	paths = {}
-	PL = open(path_list,'r')
+	PL = open(f"{kegg_dir}/etc/pathways.list",'r')
 	for line in PL:
 		paths[line.strip()] = True
 	PL.close()
 
 
-	locs = {}
-
+	path_by_orth = {}
+	ortho_by_path = {}
 	for path in paths.keys():
 
-		if isfile(f"{kgml_dir}/ec/ec{path}.kgml"):
+		if isfile(f"{kegg_dir}/kgml/ec/ec{path}.kgml"):
 
 			LOCS = open(f"{outdir}/ec/ec{path}.locs",'w')
-			if stat(f"{kgml_dir}/ec/ec{path}.kgml").st_size != 0:
+			if stat(f"{kegg_dir}/kgml/ec/ec{path}.kgml").st_size != 0:
 			
-				tree = ET.parse(f"{kgml_dir}/ec/ec{path}.kgml")
+				tree = ET.parse(f"{kegg_dir}/kgml/ec/ec{path}.kgml")
 
 				for entry in tree.getroot():
 					if entry.tag == 'entry':
@@ -62,11 +63,12 @@ def kgml_parser(kgml_dir=None,path_list=None,outdir="KEGG_pathway_loc_files"):
 								LOCS.write(f"\n")
 			LOCS.close()
 
-		if isfile(f"{kgml_dir}/ko/ko{path}.kgml"):
+		
+		if isfile(f"{kegg_dir}/kgml/ko/ko{path}.kgml"):
 
 			LOCS = open(f"{outdir}/ko/ko{path}.locs",'w')
-			if stat(f"{kgml_dir}/ko/ko{path}.kgml").st_size != 0:
-				tree = ET.parse(f"{kgml_dir}/ko/ko{path}.kgml")
+			if stat(f"{kegg_dir}/kgml/ko/ko{path}.kgml").st_size != 0:
+				tree = ET.parse(f"{kegg_dir}/kgml/ko/ko{path}.kgml")
 				for entry in tree.getroot():
 					if entry.tag == 'entry':
 						if entry.attrib['type'] == 'ortholog':
@@ -90,18 +92,52 @@ def kgml_parser(kgml_dir=None,path_list=None,outdir="KEGG_pathway_loc_files"):
 									LOCS.write(f"\n")
 			LOCS.close()
 
+
+		if isfile(f"{kegg_dir}/details/ko{path}.details"):
+
+			DET = open(f"{kegg_dir}/details/ko{path}.details",'r')
+
+			pathway = ""
+			record = False
+			for line in DET:
+				line = line.rstrip()
+
+				if line != "":
+					if line[0:4] == "NAME":
+						pathway = line[4:].strip()
+						ortho_by_path[pathway] = 0
+					elif line[0:9] == "ORTHOLOGY":
+						ortho = line[9:].strip().split(" ")[0]
+						if ortho not in path_by_orth.keys():
+							path_by_orth[ortho] = []
+						path_by_orth[ortho].append(pathway)
+						ortho_by_path[pathway] += 1
+						record = True
+					elif line[0] == " " and record == True:
+						ortho = line.strip().split(" ")[0]
+						if ortho not in path_by_orth.keys():
+							path_by_orth[ortho] = []
+						path_by_orth[ortho].append(pathway)
+						ortho_by_path[pathway] += 1
+					else:
+						record = False
+
+	OUT = open(f"{kegg_dir}/etc/ortho_pathways.tsv",'w')
+	for ortho in sorted(path_by_orth.keys()):
+		# pathways = "\t".join([f"{pathway}:{ortho_by_path[pathway]}" for pathway in path_by_orth[ortho]])
+		pathways = ";".join(path_by_orth[ortho])
+		OUT.write(f"{ortho}\t{pathways}\n")
+	OUT.close()
+	
+
 if __name__ == "__main__":
 
 	from argparse import ArgumentParser
 
 	GetOptions = ArgumentParser()
-	GetOptions.add_argument("-k","--kgml_dir",required=True)
-	GetOptions.add_argument("-p","--path_list",required=True)
-	GetOptions.add_argument("-o","--outdir",default="KEGG_pathway_loc_files")
+	GetOptions.add_argument("-k","--kegg_dir",required=True)
 
 	args = GetOptions.parse_known_args()[0]
-	kgml_dir = args.kgml_dir
-	path_list = args.path_list
-	outdir = args.outdir
+	kegg_dir = args.kegg_dir
 
-	kgml_parser(kgml_dir=kgml_dir,path_list=path_list,outdir=outdir)
+	kgml_parser(kegg_dir=kegg_dir)
