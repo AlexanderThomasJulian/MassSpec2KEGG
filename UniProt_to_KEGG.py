@@ -61,6 +61,7 @@ def UniProt_to_KEGG(parsed_peptide_dir=None,ref=None,upa_seq=None,kegg_id=None,o
 				"-outfmt",'6 qseqid sseqid',
 				"-out",f"{outdir}/UniProt_to_NCBI.blastp.6",
 				"-culling_limit","1",
+				'-max_target_seqs','1',
 				"-max_hsps","1"],
 				capture_output=True)
 
@@ -102,7 +103,6 @@ def UniProt_to_KEGG(parsed_peptide_dir=None,ref=None,upa_seq=None,kegg_id=None,o
 		line = line.strip()
 		qseqid,sseqid = line.split("\t")[0:2]
 		sseqid = sseqid.split(".")[0]
-
 		upa_to_ncbi[qseqid] = sseqid
 
 		if qseqid in ecns.keys():
@@ -193,19 +193,19 @@ def UniProt_to_KEGG(parsed_peptide_dir=None,ref=None,upa_seq=None,kegg_id=None,o
 	sample_ids = [i for i in listdir(parsed_peptide_dir) if isdir(f"{parsed_peptide_dir}/{i}")]
 	accession_by_sample = {x:{y:0 for y in sample_ids} for x in accessions.keys()}
 
-	for item in sorted(listdir(parsed_peptide_dir)):
+	for sample in sorted(listdir(parsed_peptide_dir)):
 
-		if isdir(f"{parsed_peptide_dir}/{item}"):
+		if isdir(f"{parsed_peptide_dir}/{sample}"):
 			
-			UPA = open(f"{parsed_peptide_dir}/{item}/accessions.list",'r')
+			UPA = open(f"{parsed_peptide_dir}/{sample}/accessions.list",'r')
 
 			for line in UPA:
 
 				line = line.strip()
 
-				if line in upa_to_ncbi:
+				if line in upa_to_ncbi.keys():
 
-					accession_by_sample[upa_to_ncbi[line]][item] = 1
+					accession_by_sample[upa_to_ncbi[line]][sample] = 1
 
 			UPA.close()
 
@@ -214,9 +214,9 @@ def UniProt_to_KEGG(parsed_peptide_dir=None,ref=None,upa_seq=None,kegg_id=None,o
 
 		OUT.write(f"{accession}")
 		
-		for item in sorted(accession_by_sample[accession].keys()):
+		for sample in sorted(accession_by_sample[accession].keys()):
 
-			OUT.write(f"\t{item}:{accession_by_sample[accession][item]}")
+			OUT.write(f"\t{sample}:{accession_by_sample[accession][sample]}")
 
 		OUT.write("\n")
 
