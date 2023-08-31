@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 name = 'make_master_table.py'
-updated = '2023-08-12'
-version = '0.2.0'
+updated = '2023-08-31'
+version = '0.3.0'
 
 def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg_dir=None,outdir=None):
 	
@@ -170,6 +170,22 @@ def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg
 		makedirs(temp_dir,mode=0o755)
 	for sam in sample_ids:
 		write_master(f"{temp_dir}/{sam}_master_table.tsv",sample_data[sam],sam)
+	
+	
+	OUT = open(f"{outdir}/accession_per_sample.tsv",'w')
+	max_iter = max([len(sample_data[x]) for x in sample_data.keys()])
+	headers = '#' + "\t".join([x for x in sorted(sample_data.keys())])
+	OUT.write(f"{headers}\n")
+	for i in range(max_iter):
+		line = []
+		for sam in sorted(sample_data.keys()):
+			if i < len(sample_data[sam]):
+				line.append(sample_data[sam][i])
+			else:
+				line.append("")
+		line = "\t".join(line)
+		OUT.write(f"{line}\n")
+	OUT.close()
 
 
 	# temp_dir = f"{outdir}/exclusivity_tables"
