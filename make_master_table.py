@@ -2,7 +2,7 @@
 
 name = 'make_master_table.py'
 updated = '2023-08-31'
-version = '0.3.0'
+version = '0.4.0'
 
 def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg_dir=None,outdir=None):
 	
@@ -42,8 +42,12 @@ def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg
 	path_by_ortho = {}
 	ORTH = open(f"{kegg_dir}/etc/ortho_pathways.tsv",'r')
 	for line in ORTH:
-		ortho,pathways = line.strip().split("\t")
-		path_by_ortho[ortho] = pathways
+		data = line.strip().split("\t")
+		ortho = data[0]
+		pathways = []
+		for item in data[1:]:
+			pathways.append(item.split(":")[0])
+		path_by_ortho[ortho] = ";".join(pathways)
 	ORTH.close()
 
 	headers = False
@@ -114,14 +118,19 @@ def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg
 		OUT.write(f"{line}\n")
 	OUT.close()
 
-	
-	def write_master(outpath,accessions_list,sample):
+
+	def write_master(outpath,accessions_list,sample,samples=None):
 
 		OUT = open(outpath,'w')
 		
 		if sample == 'all':
 			header_1 = ("\t"*len(sample_ids)).join(headers)
 			header_2 = "\t".join(("\t".join(sample_ids)) for x in range(len(headers)))
+			OUT.write(f"## Accession\tProvided_UniProt_Accessions\tEnzyme_Classification_Number\tKEGG_ID\tKEGG_Ortholog\tPathways\tAnnotation\tSequence_Length\t{header_1}\n")
+			OUT.write(f"#\t\t\t\t\t\t\t\t{header_2}\n")
+		elif sample == "exc":
+			header_1 = ("\t"*len(samples)).join(headers)
+			header_2 = "\t".join(("\t".join(samples)) for x in range(len(headers)))
 			OUT.write(f"## Accession\tProvided_UniProt_Accessions\tEnzyme_Classification_Number\tKEGG_ID\tKEGG_Ortholog\tPathways\tAnnotation\tSequence_Length\t{header_1}\n")
 			OUT.write(f"#\t\t\t\t\t\t\t\t{header_2}\n")
 		else:
@@ -151,10 +160,16 @@ def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg
 
 				if sample == 'all':
 
-					for sample in sample_ids:
+					for sam in sample_ids:
 
-						OUT.write(f"\t{table_data[accession][head][sample]}")
+						OUT.write(f"\t{table_data[accession][head][sam]}")
 
+				elif sample == 'exc':
+
+					for sam in samples:
+
+						OUT.write(f"\t{table_data[accession][head][sam]}")
+				
 				else:
 
 					OUT.write(f"\t{table_data[accession][head][sample]}")
@@ -170,27 +185,27 @@ def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg
 		makedirs(temp_dir,mode=0o755)
 	for sam in sample_ids:
 		write_master(f"{temp_dir}/{sam}_master_table.tsv",sample_data[sam],sam)
+	for exc in exc_ids:
+		write_master(f"{temp_dir}/{exc}_master_table.tsv",exclusivity_data[exc],'exc',samples=[sample_ids[i] for i,x in enumerate(reversed(exc)) if x != '0'])
 	
 	
 	OUT = open(f"{outdir}/accession_per_sample.tsv",'w')
 	max_iter = max([len(sample_data[x]) for x in sample_data.keys()])
-	headers = '#' + "\t".join([x for x in sorted(sample_data.keys())])
+	headers = '# ' + "\t\t".join([x for x in sorted(sample_data.keys())])
 	OUT.write(f"{headers}\n")
 	for i in range(max_iter):
 		line = []
 		for sam in sorted(sample_data.keys()):
 			if i < len(sample_data[sam]):
 				line.append(sample_data[sam][i])
+				line.append(annotations[sample_data[sam][i]])
 			else:
+				line.append("")
 				line.append("")
 		line = "\t".join(line)
 		OUT.write(f"{line}\n")
 	OUT.close()
 
-
-	# temp_dir = f"{outdir}/exclusivity_tables"
-	# if not isdir(temp_dir):
-	# 	makedirs(temp_dir,mode=0o755)
 	
 	OUT = open(f"{outdir}/simple_exclusivity_table.tsv",'w')
 	title1 = "\t\t\t".join(exc_ids)
@@ -215,6 +230,8 @@ def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg
 				else:
 					line.append("N/A")
 			else:
+				line.append("")
+				line.append("")
 				line.append("")
 		line = "\t".join(line)
 		OUT.write(f"{line}\n")
