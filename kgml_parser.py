@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 name = 'kgml_parser.py'
-updated = '2023-08-27'
-version = '0.3.0'
+updated = '2023-08-31'
+version = '0.3.1'
 
 def kgml_parser(kegg_dir=None):
 
@@ -33,12 +33,12 @@ def kgml_parser(kegg_dir=None):
 	ortho_by_path = {}
 	for path in paths.keys():
 
-		if isfile(f"{kegg_dir}/kgml/ec/ec{path}.kgml"):
+		if isfile(f"{kegg_dir}/kgmls/ec/ec{path}.kgml"):
 
 			LOCS = open(f"{outdir}/ec/ec{path}.locs",'w')
-			if stat(f"{kegg_dir}/kgml/ec/ec{path}.kgml").st_size != 0:
+			if stat(f"{kegg_dir}/kgmls/ec/ec{path}.kgml").st_size != 0:
 			
-				tree = ET.parse(f"{kegg_dir}/kgml/ec/ec{path}.kgml")
+				tree = ET.parse(f"{kegg_dir}/kgmls/ec/ec{path}.kgml")
 
 				for entry in tree.getroot():
 					if entry.tag == 'entry':
@@ -64,11 +64,11 @@ def kgml_parser(kegg_dir=None):
 			LOCS.close()
 
 		
-		if isfile(f"{kegg_dir}/kgml/ko/ko{path}.kgml"):
+		if isfile(f"{kegg_dir}/kgmls/ko/ko{path}.kgml"):
 
 			LOCS = open(f"{outdir}/ko/ko{path}.locs",'w')
-			if stat(f"{kegg_dir}/kgml/ko/ko{path}.kgml").st_size != 0:
-				tree = ET.parse(f"{kegg_dir}/kgml/ko/ko{path}.kgml")
+			if stat(f"{kegg_dir}/kgmls/ko/ko{path}.kgml").st_size != 0:
+				tree = ET.parse(f"{kegg_dir}/kgmls/ko/ko{path}.kgml")
 				pathway = tree.getroot().attrib['title']
 				ortho_by_path[pathway] = 0
 				for entry in tree.getroot():
@@ -78,7 +78,8 @@ def kgml_parser(kegg_dir=None):
 							for ortho in ortholog:
 								if ortho not in path_by_orth.keys():
 									path_by_orth[ortho] = []
-								path_by_orth[ortho].append(pathway)
+								if pathway not in path_by_orth[ortho]:
+									path_by_orth[ortho].append(pathway)
 							ortho_by_path[pathway] += 1
 							for graphic in entry:
 								x = 0
