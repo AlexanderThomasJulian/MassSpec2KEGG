@@ -27,18 +27,27 @@ def kgml_parser(kegg_dir=None):
 	for line in PL:
 		paths[line.strip()] = True
 	PL.close()
+	
+	## Pathway name to pathway key
+	pathways = {}
 
+	## Pathway name per kegg ortholog
+	path_by_ortho = {}
 
-	path_by_orth = {}
+	## Number of orthologs per kegg pathway
 	ortho_by_path = {}
-	for path in paths.keys():
 
-		if isfile(f"{kegg_dir}/kgmls/ec/ec{path}.kgml"):
+	## Number of ortholog groups per kegg pathway
+	ortho_groups_by_path = {}
+
+	for path in sorted(paths.keys()):
+
+		if isfile(f"{kegg_dir}/kgml/ec/ec{path}.kgml"):
 
 			LOCS = open(f"{outdir}/ec/ec{path}.locs",'w')
-			if stat(f"{kegg_dir}/kgmls/ec/ec{path}.kgml").st_size != 0:
+			if stat(f"{kegg_dir}/kgml/ec/ec{path}.kgml").st_size != 0:
 			
-				tree = ET.parse(f"{kegg_dir}/kgmls/ec/ec{path}.kgml")
+				tree = ET.parse(f"{kegg_dir}/kgml/ec/ec{path}.kgml")
 
 				for entry in tree.getroot():
 					if entry.tag == 'entry':
@@ -64,23 +73,17 @@ def kgml_parser(kegg_dir=None):
 			LOCS.close()
 
 		
-		if isfile(f"{kegg_dir}/kgmls/ko/ko{path}.kgml"):
+		if isfile(f"{kegg_dir}/kgml/ko/ko{path}.kgml"):
 
 			LOCS = open(f"{outdir}/ko/ko{path}.locs",'w')
-			if stat(f"{kegg_dir}/kgmls/ko/ko{path}.kgml").st_size != 0:
-				tree = ET.parse(f"{kegg_dir}/kgmls/ko/ko{path}.kgml")
-				pathway = tree.getroot().attrib['title']
-				ortho_by_path[pathway] = 0
+			if stat(f"{kegg_dir}/kgml/ko/ko{path}.kgml").st_size != 0:
+				tree = ET.parse(f"{kegg_dir}/kgml/ko/ko{path}.kgml")
+				ortho_groups_by_path[path] = 0
 				for entry in tree.getroot():
 					if entry.tag == 'entry':
 						if entry.attrib['type'] == 'ortholog':
 							ortholog = [x.replace("ko:","") for x in entry.attrib['name'].split(" ")]
-							for ortho in ortholog:
-								if ortho not in path_by_orth.keys():
-									path_by_orth[ortho] = []
-								if pathway not in path_by_orth[ortho]:
-									path_by_orth[ortho].append(pathway)
-							ortho_by_path[pathway] += 1
+							ortho_groups_by_path[path] += 1
 							for graphic in entry:
 								x = 0
 								y = 0
@@ -101,40 +104,39 @@ def kgml_parser(kegg_dir=None):
 			LOCS.close()
 
 
-		# if isfile(f"{kegg_dir}/details/ko{path}.details"):
+		if isfile(f"{kegg_dir}/details/ko{path}.details"):
 
-		# 	DET = open(f"{kegg_dir}/details/ko{path}.details",'r')
+			DET = open(f"{kegg_dir}/details/ko{path}.details",'r')
 
-		# 	pathway = ""
-		# 	record = False
-		# 	for line in DET:
-		# 		line = line.rstrip()
+			ortho_by_path[path] = 0
+			record = False
+			pathway = ""
+			for line in DET:
+				line = line.rstrip()
+				if line != "":
+					if line[0:4] == "NAME":
+						pathway = line[4:].strip()
+						pathways[path] = pathway
+					elif line[0:9] == "ORTHOLOGY":
+						ortho = line[9:].strip().split(" ")[0]
+						ortho_by_path[path] += 1
+						if ortho not in path_by_ortho.keys(): path_by_ortho[ortho] = []
+						if path not in path_by_ortho[ortho]: path_by_ortho[ortho].append(path)
+						record = True
+					elif line[0] == " " and record == True:
+						ortho = line.strip().split(" ")[0]
+						if ortho not in path_by_ortho.keys(): path_by_ortho[ortho] = []
+						if path not in path_by_ortho[ortho]: path_by_ortho[ortho].append(path)
+						ortho_by_path[path] += 1
+					else:
+						record = False
 
-		# 		if line != "":
-		# 			if line[0:4] == "NAME":
-		# 				pathway = line[4:].strip()
-		# 				ortho_by_path[pathway] = 0
-		# 			elif line[0:9] == "ORTHOLOGY":
-		# 				ortho = line[9:].strip().split(" ")[0]
-		# 				if ortho not in path_by_orth.keys():
-		# 					path_by_orth[ortho] = []
-		# 				path_by_orth[ortho].append(pathway)
-		# 				ortho_by_path[pathway] += 1
-		# 				record = True
-		# 			elif line[0] == " " and record == True:
-		# 				ortho = line.strip().split(" ")[0]
-		# 				if ortho not in path_by_orth.keys():
-		# 					path_by_orth[ortho] = []
-		# 				path_by_orth[ortho].append(pathway)
-		# 				ortho_by_path[pathway] += 1
-		# 			else:
-		# 				record = False
+			DET.close()
 
 	OUT = open(f"{kegg_dir}/etc/ortho_pathways.tsv",'w')
-	for ortho in sorted(path_by_orth.keys()):
-		pathways = "\t".join([f"{pathway}:{ortho_by_path[pathway]}" for pathway in path_by_orth[ortho]])
-		# pathways = ";".join(path_by_orth[ortho])
-		OUT.write(f"{ortho}\t{pathways}\n")
+	for ortho in sorted(path_by_ortho.keys()):
+		line = ";".join([f"{pathways[path]}:{ortho_by_path[path]}:{ortho_groups_by_path[path]}" for path in sorted(path_by_ortho[ortho],key = lambda x: pathways[x])])
+		OUT.write(f"{ortho}\t{line}\n")
 	OUT.close()
 	
 
