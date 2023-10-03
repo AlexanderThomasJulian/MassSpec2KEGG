@@ -1,8 +1,8 @@
 #!/usr/bin/env	python3
 
 name = 'grab_KEGG_maps.py'
-version = '0.1.0'
-updated = '2023-08-27'
+version = '0.1.1'
+updated = '2023-10-02'
 
 def grab_KEGG_maps(outdir="KEGG_MAP_files"):
 
@@ -41,10 +41,10 @@ def grab_KEGG_maps(outdir="KEGG_MAP_files"):
 		PATHWAYS.close()
 	else:
 		OUT = open(f"{outdir}/etc/pathways.list",'w')
-		list = run(["curl","https://rest.kegg.jp/link/module/pathway"],capture_output=True,text=True).stdout
+		list = run(["curl","https://rest.kegg.jp/list/pathway"],capture_output=True,text=True).stdout
 		for line in list.split("\n"):
 			if line != "":
-				mapp = line.split("\t")[0].split(":")[-1]
+				mapp = line.split("\t")[0]
 				mapp  = mapp.replace("map","")
 				if mapp not in mapps.keys():
 					mapps[mapp] = True
@@ -66,7 +66,7 @@ def grab_KEGG_maps(outdir="KEGG_MAP_files"):
 			run(["curl",f"https://rest.kegg.jp/get/ec{mapp}/kgml","-o",f"{outdir}/kgml/ec/ec{mapp}.kgml"],capture_output=True)
 
 		if not isfile(f"{outdir}/maps/ko{mapp}.png"):
-			run(["wget",f"https://rest.kegg.jp/get/map{mapp}/image","-O",f"{outdir}/maps/ko{mapp}.png"],capture_output=True)
+			run(["curl",f"https://rest.kegg.jp/get/map{mapp}/image","-o",f"{outdir}/maps/ko{mapp}.png"],capture_output=True)
 
 		# pg.update_progress_bar()
 
