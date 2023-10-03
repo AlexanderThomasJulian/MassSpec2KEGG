@@ -45,10 +45,11 @@ def make_master_table(prot_count_dir=None,ref_faa=None,conversion_file=None,kegg
 		data = line.strip().split("\t")
 		ortho = data[0]
 		pathways = []
-		for item in data[1:]:
+		for item in data[1].split(";"):
 			pathways.append(item.split(":")[0])
 		path_by_ortho[ortho] = ";".join(pathways)
 	ORTH.close()
+
 
 	headers = False
 	sample_data = {}
