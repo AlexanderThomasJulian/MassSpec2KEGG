@@ -49,15 +49,15 @@ def parse_scaffold_peptide_summary(peptide_report=False,outdir="PARSED_REPORT"):
 
 	REPORT.close()
 
+	if not isdir(outdir):
+		makedirs(outdir,mode=0o755)
+
 
 	MASTER_ACCESSION = open(f"{outdir}/accessions.list",'w')
 	for accession in sorted(accessions.keys()):
 		MASTER_ACCESSION.write(f"{accession}\n")
 	MASTER_ACCESSION.close()
 
-
-	if not isdir(outdir):
-		makedirs(outdir,mode=0o755)
 
 	for sample in data.keys():
 		
